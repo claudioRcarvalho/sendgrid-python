@@ -10,7 +10,7 @@ except ImportError: # Python 2
     from urllib import urlencode
 
 from .exceptions import SendGridClientError, SendGridServerError
-
+import json
 
 class SendGridClient(object):
 
@@ -73,6 +73,14 @@ class SendGridClient(object):
         for filename in message.files:
             if message.files[filename]:
                 values['files[' + filename + ']'] = message.files[filename]
+
+        # If x-smtpapi contains a 'to' field, then it will break 'bcc'.
+        # Remove amibiguity in favor of the existing 'to[]' fields.
+        if 'x-smtpapi' in values and 'bcc[]' in values:
+            vals_json = json.loads(values['x-smtpapi'])
+            if 'to' in vals_json:
+                del vals_json['to']
+                values['x-smtpapi'] = json.dumps(vals_json)
         return values
 
     def _make_request(self, message):
